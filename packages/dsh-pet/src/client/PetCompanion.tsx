@@ -326,6 +326,9 @@ export function PetCompanion(props: PetCompanionProps): ReactPortal {
                 autoFocus
                 onChange={(e) => setNameDraft(e.target.value)}
                 onKeyDown={(e) => {
+                  // Enter/Escape belong to the input method while a Chinese
+                  // candidate composition is active; never submit or close.
+                  if (e.nativeEvent.isComposing) return
                   if (e.key === 'Enter') {
                     const trimmed = nameDraft.trim()
                     if (trimmed !== '') {
