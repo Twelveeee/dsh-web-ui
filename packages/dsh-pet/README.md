@@ -1,71 +1,45 @@
-# dsh-pet — DSH 多宠物伴侣
+# dsh-pet — Multi-pet companion for DSH
 
-![version](https://img.shields.io/badge/version-0.1.11-4f8ef7) ![license](https://img.shields.io/badge/license-BSD--3--Clause-9b59b6) ![platform](https://img.shields.io/badge/platform-DSH%20Web-00c2a8) ![language](https://img.shields.io/badge/language-TypeScript-3178c6)
+English | [中文](README.zh.md)
 
-在 DeepSeek Harness Web 界面中显示一个会响应工作状态的桌面宠物。默认提供 Whale Girl；后续宠物按约定放入素材目录即可自动注册，并在设置卡中选择。
+A multi-pet companion plugin for the DSH Web GUI, with activity-aware animation, pet switching, interactions, per-pet names, and shared affinity.
 
-插件基于官方 `@deepseek-ai/*` NPM SDK，以 Cordis bundle 的 host/client 双端形态实现，不修改 DSH 源码。
+The package uses the official `@deepseek-ai/*` NPM SDK and ships as a Cordis bundle with host and browser halves. It does not modify DSH source code.
 
-## 功能
+## Features
 
-| 功能 | 说明 |
+| Feature | Description |
 |---|---|
-| 多宠物切换 | 在设置的宠物卡片中选择；同一时刻只显示一只，选择结果持久化 |
-| 状态动画 | `thinking/tool` 对应工作、`waiting` 对应等待、`done` 对应庆祝，空闲时播放待机动画 |
-| 摸摸与喂食 | 点击宠物或使用面板按钮获得气泡反馈和亲密度；互动带冷却 |
-| 共享成长 | 亲密度、零食库存、显示位置和尺寸由所有宠物共享 |
-| 独立命名 | 每只宠物保存自己的自定义名字，切换后自动恢复 |
-| 拖动 | 按住宠物拖动重新摆放，位置会持久化 |
-| 隐藏与恢复 | 面板可隐藏宠物，隐藏后页面不留按钮，可在设置卡中恢复显示 |
-| 可访问性 | 设置选择器使用原生表单控件和清晰焦点态，并支持 reduced motion |
+| Pet selection | Select an installed pet from the settings card; one pet is active at a time and the selection is persisted |
+| State animation | Core session events map thinking and tools to working tracks, completed turns to celebration, and idle time to standby |
+| Petting and feeding | Click the pet or use the hover panel to receive feedback and affinity, subject to cooldowns |
+| Shared growth | Affinity, treat stock, display size, and position are shared across pets |
+| Per-pet names | Each pet keeps its own custom name and restores it when selected again |
+| Dragging | Drag the pet to reposition it; the position is persisted |
+| Hide and restore | Hide the pet from its hover panel; no page-level button remains, and the settings card restores it |
+| Accessibility | The selector uses native controls and visible focus states, and animation honors reduced-motion preferences |
 
-## 内置宠物
+## Built-in pet
 
-| ID | 默认名称 | 图集 |
+| ID | Default name | Atlas |
 |---|---|---|
-| `whale` | Whale Girl | 8 列 × 9 行，v1 |
+| `whale` | Whale Girl | 8 columns × 9 rows, v1 |
 
-Whale Girl 动画预览：
+Whale Girl animation previews:
 
-| idle 待机 | waiting 等待 | running 工作 | jumping 庆祝 |
+| idle | waiting | running | jumping |
 |---|---|---|---|
 | ![idle](assets/whale/previews/idle.gif) | ![waiting](assets/whale/previews/waiting.gif) | ![running](assets/whale/previews/running.gif) | ![jumping](assets/whale/previews/jumping.gif) |
 
-## 架构
+## Install
 
-```text
-dsh-pet/
-|-- src/
-|   |-- index.ts            # host 入口、设置与路由注册
-|   |-- pets.ts             # assets 自动发现与 manifest 注册表
-|   |-- service.ts          # 状态机、切换、互动与配置服务
-|   |-- state.ts            # activity/status -> 9 条动画轨道
-|   |-- affinity.ts         # 共享亲密度账本
-|   |-- treats.ts           # 共享零食库存
-|   |-- persist.ts          # $DSH_HOME/pet.json 原子持久化与旧数据迁移
-|   |-- routes.ts           # /api/pet/* 与 /pet/<petId>/*
-|   `-- client/
-|       |-- index.ts        # 全局挂载、轮询与 API 接线
-|       |-- PetDockEntry.tsx
-|       |-- PetCompanion.tsx # 图集渲染、互动和拖动
-|       `-- spritesheet.ts   # 图集几何与动画节奏
-|-- assets/<petId>/         # 每只宠物的 manifest 与 spritesheet
-`-- cordis.patch.yml
-```
-
-浏览器端使用一个挂在 `document.body` 上的全局 React root，因此宠物在新会话页和已有会话中保持一致。客户端约每 800 ms 读取 `/api/pet/state`；切换、互动、隐藏、布局和命名分别写入同源 `/api/pet/*` 端点。host 端监听 `activity/status`，将 DSH 工作阶段转换成动画轨道。
-
-持久化模型中，`petId` 表示当前选择，`names` 按宠物 ID 保存自定义名；`affinity`、`treats` 和 `display` 保持共享。旧版 `name` 字段会在读取时迁移到 `names.whale`。
-
-## 安装
-
-推荐安装聚合包 `@linxin666/dsh-web-ui-all`，也可以单独安装：
+The recommended installation is the `@linxin666/dsh-web-ui-all` aggregate. To install this plugin package directly:
 
 ```sh
 dsh plugin --profile web add @linxin666/dsh-pet
 ```
 
-仓库开发方式：
+For repository development:
 
 ```sh
 git clone https://github.com/zhu1090093659/dsh-web-ui.git
@@ -75,11 +49,26 @@ pnpm --filter @linxin666/dsh-pet build
 dsh plugin --profile web add link:$(pwd)/packages/dsh-pet
 ```
 
-安装后重启 `dsh web`。link 模式修改代码后重新构建并刷新页面，无需重装。
+Restart `dsh web` after installation. In link mode, rebuild and refresh the page after code changes; reinstalling is unnecessary.
 
-## 添加宠物
+## Configuration
 
-新宠物不需要修改注册代码。在 `packages/dsh-pet/assets/` 下创建 URL 安全的目录，目录名就是稳定的宠物 ID。每个目录至少包含：
+The settings card appears under Settings, Plugins, Web UI plugins, Pet when `dsh-web-ui-settings` is installed. The aggregate package includes that settings surface.
+
+| Field | Default | Meaning |
+|---|---:|---|
+| `visible` | `true` | Whether the selected pet is displayed |
+| `size` | `160` | Sprite cell height in pixels |
+| `right` | `24` | Distance from the right viewport edge in pixels |
+| `bottom` | `20` | Distance from the bottom viewport edge in pixels |
+| `name` | `Whale Girl` | Name used for the current pet; custom names are stored per pet |
+| `enabled` | `true` | Host-side master switch for activity listeners and routes |
+
+The active pet ID, per-pet names, shared affinity, treats, and display layout are stored in `$DSH_HOME/pet.json`. A legacy single `name` value is migrated to `names.whale` when loaded.
+
+## Add a pet
+
+A new pet does not require registry code changes. Create a URL-safe directory under `packages/dsh-pet/assets/`; the directory name is the stable pet ID. Every pet directory must contain:
 
 ```text
 assets/my-pet/
@@ -87,7 +76,7 @@ assets/my-pet/
 `-- spritesheet.webp
 ```
 
-manifest 示例：
+Example manifest:
 
 ```json
 {
@@ -100,21 +89,11 @@ manifest 示例：
 }
 ```
 
-注册表以目录名为准，不信任 manifest 中的 `id`。合法 ID 由 ASCII 字母或数字开头，后续可包含字母、数字和连字符，最长 64 字符。`displayName` 必填；`description` 可选；`frames` 可选，存在时必须是 9 个 1–8 的整数。缺少 `frames` 时，客户端会扫描透明像素推断每行实际帧数。
+The directory name is authoritative; the registry does not trust the manifest `id`. A valid ID starts with an ASCII letter or digit, may then contain ASCII letters, digits, and hyphens, and is at most 64 characters. `displayName` is required. `description` is optional. When present, `frames` must contain nine integers from 1 through 8; when absent, the browser estimates row lengths from transparent pixels.
 
-图集单元固定为 192×208、每行 8 列。前 9 行依次为 idle、running-right、running-left、waving、jumping、failed、waiting、running、review。渲染器同时支持 9 行 v1 图集和带额外方向行的 11 行 Codex v2 图集，额外两行不会参与 DSH 状态动画。
+Atlas cells are fixed at 192×208 pixels with eight columns per row. The first nine rows are idle, running-right, running-left, waving, jumping, failed, waiting, running, and review. The renderer accepts both 9-row v1 atlases and 11-row Codex v2 atlases; the two additional directional rows are not driven by DSH state transitions.
 
-添加完成后执行：
-
-```sh
-pnpm --filter @linxin666/dsh-pet typecheck
-pnpm --filter @linxin666/dsh-pet test
-pnpm --filter @linxin666/dsh-pet build
-```
-
-重启 `dsh web` 后，新宠物会自动出现在“设置 -> 插件 -> Web UI 插件 -> 宠物”的选择器中。建议用 hatch-pet 校验图集后再提交，并确保 manifest 与 WebP 一起进入包内 `assets/`。
-
-## 开发与验证
+Validate the package after adding assets:
 
 ```sh
 pnpm --filter @linxin666/dsh-pet typecheck
@@ -122,8 +101,50 @@ pnpm --filter @linxin666/dsh-pet test
 pnpm --filter @linxin666/dsh-pet build
 ```
 
-浏览器 bundle 使用 `window.__ModuleLoader__.load` 契约，React 和 Cordis 等依赖由 DSH loader 提供；CSS Modules 由 Lightning CSS 打进客户端 bundle。
+Restart `dsh web`; the new pet appears in the pet selector. Validate generated artwork with hatch-pet before contributing it, and commit both the manifest and WebP asset.
+
+## Architecture
+
+```text
+dsh-pet/
+|-- src/
+|   |-- index.ts             # host entry, settings, and routes
+|   |-- pets.ts              # asset discovery and manifest registry
+|   |-- service.ts           # session mapping, switching, interactions, and config
+|   |-- state.ts             # working phases to animation tracks
+|   |-- affinity.ts          # shared affinity ledger
+|   |-- treats.ts            # shared treat stock
+|   |-- persist.ts           # atomic persistence and legacy migration
+|   |-- routes.ts            # /api/pet/* and /pet/<petId>/*
+|   `-- client/
+|       |-- index.ts         # global mount, polling, and API wiring
+|       |-- PetDockEntry.tsx
+|       |-- PetCompanion.tsx # atlas rendering, interactions, and dragging
+|       `-- spritesheet.ts   # atlas geometry and animation timing
+|-- assets/<petId>/          # manifest and spritesheet for each pet
+`-- cordis.patch.yml
+```
+
+The browser owns one global React root on `document.body`, so the pet remains available on new-conversation and existing-conversation pages. It polls `/api/pet/state` about every 800 ms and writes switching, interaction, visibility, layout, and naming changes through same-origin `/api/pet/*` routes.
+
+The host derives working phases from rc.6 core session events such as `turn/start`, `step/start`, `tool/call`, and `turn/end`. It keeps one active pet ID and a name map keyed by pet ID, while affinity, treats, and display settings remain shared.
+
+## Development
+
+```sh
+pnpm --filter @linxin666/dsh-pet typecheck
+pnpm --filter @linxin666/dsh-pet test
+pnpm --filter @linxin666/dsh-pet build
+```
+
+The browser bundle uses the `window.__ModuleLoader__.load` contract. DSH supplies React, Cordis, and other platform dependencies, while Lightning CSS embeds CSS Modules into the client bundle.
+
+## Known limitations
+
+- The selector and hidden-state recovery UI require `dsh-web-ui-settings`; use the aggregate package or install that settings plugin alongside a standalone pet package.
+- Only one pet is displayed at a time; affinity, treats, size, and position are deliberately shared.
+- Codex v2 directional rows beyond the first nine animation rows are accepted as assets but are not selected by current DSH state transitions.
 
 ## License
 
-[BSD-3-Clause](LICENSE)
+[Apache-2.0](../../LICENSE)

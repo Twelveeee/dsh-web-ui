@@ -34,7 +34,7 @@ dsh-web-ui 是 DeepSeek Harness（DSH）Web UI 的插件与皮肤集合：任务
 - **预览**：多标签预览 markdown、HTML、代码、diff、CSV、PDF、Office、图片与文本等格式，支持源码 / 预览切换、分屏编辑与保存；
 - **变更（SCM）**：真实 git 变更面板，支持 stage / unstage / discard；
 - 面板宽度可拖拽调整，双击把手复位默认宽度，折叠状态与宽度按项目持久化；
-- 8 款皮肤全部适配右侧面板，换肤后面板随之融入主题。
+- 9 款皮肤全部适配右侧面板，换肤后面板随之融入主题。
 
 ![右侧面板](docs/screenshots/19-right-panel.png)
 
@@ -76,13 +76,13 @@ dsh-web-ui 是 DeepSeek Harness（DSH）Web UI 的插件与皮肤集合：任务
 
 ### 设置中心
 
-全部插件的开关与参数统一收纳于「设置 > 插件配置」，修改即时生效。
+全部插件的开关与参数统一收纳于「设置 > 插件配置」，修改即时生效；组内另有「社区插件」卡片，索引社区贡献者自行登记的插件并链接到他们的仓库。
 
 ![插件配置中心](docs/screenshots/02-settings-web-ui-plugins.png)
 
 ## 皮肤
 
-皮肤中心提供 8 款皮肤，均支持先试穿再应用：试穿即时生效、退出完全还原，确认满意后一键应用。
+皮肤中心提供 9 款皮肤，均支持先试穿再应用：试穿即时生效、退出完全还原，确认满意后一键应用。
 
 ![皮肤中心](docs/screenshots/03-settings-skin-center.png)
 
@@ -116,7 +116,7 @@ dsh-web-ui 是 DeepSeek Harness（DSH）Web UI 的插件与皮肤集合：任务
 
 ![交易终端 亮色](docs/screenshots/26-skin-trading-light.png) · ![交易终端 暗色](docs/screenshots/27-skin-trading-dark.png)
 
-其余三款：QQ2008 怀旧版（水晶蓝配色与企鹅元素）、同花顺风格（行情元素融入界面）、龙的传人（朱砂龙印主题）。
+其余四款：QQ2008 怀旧版（水晶蓝配色与企鹅元素）、同花顺风格（行情元素融入界面）、龙的传人（朱砂龙印主题）、初音未来（蓝紫品红渐变与磨砂玻璃面板，亮暗双主题）。
 
 ## 安装
 
@@ -127,12 +127,12 @@ DSH 插件通过 `dsh plugin` 命令安装进 **profile**（`dsh web` 对应 `we
 插件已发布到 npm（`@linxin666` scope），一条命令装齐：
 
 ```sh
-dsh plugin --profile web add @linxin666/dsh-web-ui-all@0.1.10
+dsh plugin --profile web add @linxin666/dsh-web-ui-all@0.1.12
 ```
 
 装完重启 `dsh web`，侧边栏即可看到全部插件入口。只想用皮肤则装 `@linxin666/dsh-skins`。
 
-> 版本固定为当前最新发布版 `0.1.10`。`0.1.1` 的 `dsh-pet` 缺少运行时文件（`lib/types/*.js`），且个别环境对 npm `latest` 的解析可能受 registry 缓存影响，带版本号安装最稳妥；升级时把 `@0.1.10` 换成新版本号。
+> 版本固定为当前最新发布版 `0.1.12`。`0.1.1` 的 `dsh-pet` 缺少运行时文件（`lib/types/*.js`），且个别环境对 npm `latest` 的解析可能受 registry 缓存影响，带版本号安装最稳妥；升级时把 `@0.1.12` 换成新版本号。
 
 > 首次安装若提示 `ERR_PNPM_IGNORED_BUILDS`（pnpm 拒绝依赖的构建脚本），按提示把 `cloudflared` / `cpu-features` / `ssh2` 加入 profile 的 `pnpm-workspace.yaml` `allowBuilds` 后重新执行即可。
 
@@ -181,6 +181,12 @@ dsh plugin --profile web add @linxin666/dsh-pet                    # 鲸鱼娘�
 
 技术细节见 [docs/plugins.md](docs/plugins.md)。
 
+## 社区
+
+欢迎加入**中心社区**，与开发者和其他用户一起交流使用心得、反馈问题、参与讨论。微信扫码即可加入：
+
+![中心社区](docs/community-center.jpg)
+
 ## 来源与版权
 
 | 包 | 来源 | 版权 |
@@ -189,9 +195,17 @@ dsh plugin --profile web add @linxin666/dsh-pet                    # 鲸鱼娘�
 
 迁入第三方代码必须保留 LICENSE 与署名；活跃且有上游的第三方优先 fork 或依赖引用，不搬代码。
 
-## 友情链接
+<details>
+<summary>友情链接</summary>
 
 - https://linux.do
+- [dshfind](https://dshfind.com) —— 面向 DeepSeek Harness 的学习与分享社区，聚合论文精读、插件超市与用户排名。
+- [deepseek-plugin-store](https://github.com/Ericwong5021/deepseek-plugin-store) —— DeepSeek Harness 独立社区插件商店，发现、安装并提交经过验证的插件、工具与扩展。
+- [dsh-data-agent](https://github.com/omdsh-dev/dsh-data-agent) —— 为 DSH 定义专用 Data Agent 预设，让 AI 帮你查询、更新、分析数据。
+- [dsh-TUI](https://github.com/ccch1mneyyy/dsh-TUI) —— Claude Code 风格全屏交互终端插件，补位官方缺失的终端 TUI：像素鲸鱼顶栏、实时工作状态行、思考流式展开、双击 Esc 回滚、上下文进度条与 TPS 仪表。
+- [dsh-tianshu-tui](https://github.com/huiliyi37/dsh-tianshu-tui) —— 基于官方 DeepSeek Harness 的交互式终端 UI 插件，在官方基础上增加 TDD 与证据门等工作流。
+
+</details>
 
 ## Star 历史
 
