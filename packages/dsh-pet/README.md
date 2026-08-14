@@ -1,108 +1,128 @@
-# dsh-pet — 鲸鱼娘宠物插件
+# dsh-pet — DSH 多宠物伴侣
 
-![version](https://img.shields.io/badge/version-0.1.0-4f8ef7) ![license](https://img.shields.io/badge/license-BSD--3--Clause-9b59b6) ![platform](https://img.shields.io/badge/platform-DSH%20Web-00c2a8) ![language](https://img.shields.io/badge/language-TypeScript-3178c6)
+![version](https://img.shields.io/badge/version-0.1.11-4f8ef7) ![license](https://img.shields.io/badge/license-BSD--3--Clause-9b59b6) ![platform](https://img.shields.io/badge/platform-DSH%20Web-00c2a8) ![language](https://img.shields.io/badge/language-TypeScript-3178c6)
 
-> 一只软萌治愈的鲸鱼娘，陪你在 DeepSeek Harness 里工作。
+在 DeepSeek Harness Web 界面中显示一个会响应工作状态的桌面宠物。默认提供 Whale Girl；后续宠物按约定放入素材目录即可自动注册，并在设置卡中选择。
 
-模型思考的时候你在等，她在游。她会跟着模型的工作状态切换动画——干活、等待、思考、庆祝完成；你还可以摸头、喂小鱼干，看着她从幼鲸慢慢长成你的深海羁绊。
-
-复刻自 Codex 桌面版的宠物功能，以 DSH 官方插件形态实现（cordis bundle：host 半区 + client 半区单包）。
+插件基于官方 `@deepseek-ai/*` NPM SDK，以 Cordis bundle 的 host/client 双端形态实现，不修改 DSH 源码。
 
 ## 功能
 
 | 功能 | 说明 |
 |---|---|
-| 状态动画 | 模型状态 → 鲸鱼娘动画：`thinking/tool → 工作`、`waiting → 等待`、`done → 跳跃庆祝`、空闲 `idle` 呼吸待机 |
-| 摸头互动 | 点击鲸鱼娘 → 气泡反馈 + 亲密度 +1（10s 冷却） |
-| 喂食 | 悬浮面板「喂食」→ 消耗 1 条小鱼干 + 亲密度 +5（30s 冷却） |
-| 饲料经济 | 小鱼干库存（上限 20）：工作每 3 回合 +1 条、每 30 分钟 +1 条；库存不足会提示「多陪鲸鱼娘工作一会儿」 |
-| 亲密度 | 每完成一个回合 +1；4 个等级：幼鲸 → 伙伴 → 挚友 → 深海羁绊（100 点封顶） |
-| 自定义命名 | 悬浮面板「改名」→ 1–20 字符，持久化，召唤按钮/面板同步显示 |
-| 拖动 | 按住鲸鱼娘拖动重新摆放，位置持久化 |
-| 隐藏/召唤 | 悬浮面板「隐藏」；隐藏后输入选择行出现「召唤{名字}」按钮 |
-| 状态气泡 | 工作时显示模型当前状态短语 |
+| 多宠物切换 | 在设置的宠物卡片中选择；同一时刻只显示一只，选择结果持久化 |
+| 状态动画 | `thinking/tool` 对应工作、`waiting` 对应等待、`done` 对应庆祝，空闲时播放待机动画 |
+| 摸摸与喂食 | 点击宠物或使用面板按钮获得气泡反馈和亲密度；互动带冷却 |
+| 共享成长 | 亲密度、零食库存、显示位置和尺寸由所有宠物共享 |
+| 独立命名 | 每只宠物保存自己的自定义名字，切换后自动恢复 |
+| 拖动 | 按住宠物拖动重新摆放，位置会持久化 |
+| 隐藏与恢复 | 面板可隐藏宠物，隐藏后页面不留按钮，可在设置卡中恢复显示 |
+| 可访问性 | 设置选择器使用原生表单控件和清晰焦点态，并支持 reduced motion |
 
-## 动画演示
+## 内置宠物
 
-素材为 8 列 × 9 行图集（192×208 单元），由 [hatch-pet](https://github.com/dsh2026) 流水线生成，以下为各状态动画预览：
+| ID | 默认名称 | 图集 |
+|---|---|---|
+| `whale` | Whale Girl | 8 列 × 9 行，v1 |
 
-| idle 待机 | waiting 等待 | running 干活 | jumping 庆祝 |
+Whale Girl 动画预览：
+
+| idle 待机 | waiting 等待 | running 工作 | jumping 庆祝 |
 |---|---|---|---|
 | ![idle](assets/whale/previews/idle.gif) | ![waiting](assets/whale/previews/waiting.gif) | ![running](assets/whale/previews/running.gif) | ![jumping](assets/whale/previews/jumping.gif) |
 
-| waving 挥手 | review 复盘 | failed 失败 | 左右移动 |
-|---|---|---|---|
-| ![waving](assets/whale/previews/waving.gif) | ![review](assets/whale/previews/review.gif) | ![failed](assets/whale/previews/failed.gif) | ![running-left](assets/whale/previews/running-left.gif) ![running-right](assets/whale/previews/running-right.gif) |
-
 ## 架构
 
-```
+```text
 dsh-pet/
 |-- src/
-|   |-- index.ts        # host 半区：插件入口（cordis apply，注册路由）
-|   |-- service.ts      # PetService：宠物状态机 + 亲密度 + 配置（HTTP API 服务面）
-|   |-- state.ts        # 宠物状态机：activity/status phase → 9 状态动画
-|   |-- affinity.ts     # 亲密度账本（纯函数 + 冷却）
-|   |-- treats.ts       # 小鱼干库存账本
-|   |-- persist.ts      # 持久化（$DSH_HOME/pet.json，原子写入）
-|   |-- routes.ts       # /api/pet/* JSON API + /pet/whale/* 素材静态路由
-|   `-- client/         # 浏览器半区
-|       |-- index.ts    # 全局挂载（createRoot → body）+ 轮询（800ms）+ 交互接线（fetch）
-|       |-- PetDockEntry.tsx  # 全局浮层入口（document.body，无会话/新会话/会话中全程显示）
-|       |-- WhalePet.tsx      # 浮层组件（portal + rAF 帧动画 + 拖动）
-|       |-- spritesheet.ts    # 图集几何 + 每状态动画轨道（帧/时长）
-|       `-- pet.module.css
-|-- assets/whale/       # 鲸鱼娘素材（pet.json + spritesheet.webp + 动画预览）
-`-- cordis.patch.yml    # bundle patch：插入 pet 插件行
+|   |-- index.ts            # host 入口、设置与路由注册
+|   |-- pets.ts             # assets 自动发现与 manifest 注册表
+|   |-- service.ts          # 状态机、切换、互动与配置服务
+|   |-- state.ts            # activity/status -> 9 条动画轨道
+|   |-- affinity.ts         # 共享亲密度账本
+|   |-- treats.ts           # 共享零食库存
+|   |-- persist.ts          # $DSH_HOME/pet.json 原子持久化与旧数据迁移
+|   |-- routes.ts           # /api/pet/* 与 /pet/<petId>/*
+|   `-- client/
+|       |-- index.ts        # 全局挂载、轮询与 API 接线
+|       |-- PetDockEntry.tsx
+|       |-- PetCompanion.tsx # 图集渲染、互动和拖动
+|       `-- spritesheet.ts   # 图集几何与动画节奏
+|-- assets/<petId>/         # 每只宠物的 manifest 与 spritesheet
+`-- cordis.patch.yml
 ```
 
-### 数据流
+浏览器端使用一个挂在 `document.body` 上的全局 React root，因此宠物在新会话页和已有会话中保持一致。客户端约每 800 ms 读取 `/api/pet/state`；切换、互动、隐藏、布局和命名分别写入同源 `/api/pet/*` 端点。host 端监听 `activity/status`，将 DSH 工作阶段转换成动画轨道。
 
-```
-activity/status session 事件（原 working-activity 插件发布） --> PetService（host）
-                                                              | /api/pet/* JSON
-global React root（createRoot → document.body） <-- 轮询 800ms -- pet-client（浏览器）
-                                                              |
-                                                   WhalePet 浮层（portal + rAF）
-```
-
-- **状态源**：监听 `activity/status` 会话事件（phase: idle/waiting/thinking/tool/done + 状态短语），由 host 半区消费；该事件曾由 working-activity 插件发布，插件已从本仓库移除，未安装时宠物只随会话生命周期变化。
-- **挂载点**：`document.body`（全局 React root，无会话/新会话/会话中全程显示——旧挂载点 `conversation.composer.dock` 只在活跃会话渲染，导致新会话界面看不到宠物），组件内部 `createPortal` 渲染全局浮层。
-- **渲染**：CSS sprite（background-position）逐帧动画，帧时长来自 `spritesheet.ts` 的轨道定义。
-- **通信**：浏览器 ↔ host 走同源 `/api/pet/*` JSON 端点（state/interact/set-visible/set-config），图集从 `/pet/whale/spritesheet.webp` 加载——RPC 域与 `/plugins/` 静态服务都是平台注册的，插件自足地提供自己的 API 与素材（与 dsh-remote-web-ui 的 `/api/pair` 同一模式）。
+持久化模型中，`petId` 表示当前选择，`names` 按宠物 ID 保存自定义名；`affinity`、`treats` 和 `display` 保持共享。旧版 `name` 字段会在读取时迁移到 `names.whale`。
 
 ## 安装
 
-推荐直接安装全家桶聚合包 `@linxin666/dsh-web-ui-all`（一个包装齐全部功能插件与皮肤），或单独安装本插件：
+推荐安装聚合包 `@linxin666/dsh-web-ui-all`，也可以单独安装：
 
 ```sh
-# 推荐：直接从 npm 安装
 dsh plugin --profile web add @linxin666/dsh-pet
+```
 
-# 或从仓库安装（开发调试）
+仓库开发方式：
+
+```sh
 git clone https://github.com/zhu1090093659/dsh-web-ui.git
 cd dsh-web-ui
-pnpm install && pnpm -r build
+pnpm install
+pnpm --filter @linxin666/dsh-pet build
 dsh plugin --profile web add link:$(pwd)/packages/dsh-pet
-
 ```
 
-安装后**重启 `dsh web`**，鲸鱼娘出现在界面右下角即生效。link 模式下改代码后重新 `pnpm build` 并刷新页面即可，无需重装。
+安装后重启 `dsh web`。link 模式修改代码后重新构建并刷新页面，无需重装。
 
-## 开发
+## 添加宠物
+
+新宠物不需要修改注册代码。在 `packages/dsh-pet/assets/` 下创建 URL 安全的目录，目录名就是稳定的宠物 ID。每个目录至少包含：
+
+```text
+assets/my-pet/
+|-- pet.json
+`-- spritesheet.webp
+```
+
+manifest 示例：
+
+```json
+{
+  "id": "my-pet",
+  "displayName": "My Pet",
+  "description": "A short optional description.",
+  "spritesheetPath": "spritesheet.webp",
+  "spriteVersionNumber": 2,
+  "frames": [6, 8, 8, 4, 5, 8, 6, 6, 6]
+}
+```
+
+注册表以目录名为准，不信任 manifest 中的 `id`。合法 ID 由 ASCII 字母或数字开头，后续可包含字母、数字和连字符，最长 64 字符。`displayName` 必填；`description` 可选；`frames` 可选，存在时必须是 9 个 1–8 的整数。缺少 `frames` 时，客户端会扫描透明像素推断每行实际帧数。
+
+图集单元固定为 192×208、每行 8 列。前 9 行依次为 idle、running-right、running-left、waving、jumping、failed、waiting、running、review。渲染器同时支持 9 行 v1 图集和带额外方向行的 11 行 Codex v2 图集，额外两行不会参与 DSH 状态动画。
+
+添加完成后执行：
 
 ```sh
-pnpm build        # tsc -b（类型+声明）&& tsdown（node 半区 + 浏览器 bundle）
-pnpm test         # vitest 单元测试（affinity / treats / persist / state）
-pnpm prepare      # 仅转译构建（无类型检查，供消费者安装）
-pnpm typecheck    # 仅类型检查
+pnpm --filter @linxin666/dsh-pet typecheck
+pnpm --filter @linxin666/dsh-pet test
+pnpm --filter @linxin666/dsh-pet build
 ```
 
-浏览器 bundle 走 `window.__ModuleLoader__.load` 契约，React/cordis 等由 loader 模块表解析（external）；CSS Modules 由 lightningcss 内联为 `<style data-plugin>`。
+重启 `dsh web` 后，新宠物会自动出现在“设置 -> 插件 -> Web UI 插件 -> 宠物”的选择器中。建议用 hatch-pet 校验图集后再提交，并确保 manifest 与 WebP 一起进入包内 `assets/`。
 
-## 素材与动画轨道校准
+## 开发与验证
 
-鲸鱼娘图集由 hatch-pet 流水线按 9 状态 × 8 列生成：`assets/whale/spritesheet.webp`（1536×1872，8 列 × 9 行 192×208 单元）+ `assets/whale/pet.json`。每行实际帧数与节奏在 `src/client/spritesheet.ts` 的 `TRACKS` 中定义。若素材重做导致帧数变化，只需更新该表（行序契约：0 idle / 1 running-right / 2 running-left / 3 waving / 4 jumping / 5 failed / 6 waiting / 7 running / 8 review）。
+```sh
+pnpm --filter @linxin666/dsh-pet typecheck
+pnpm --filter @linxin666/dsh-pet test
+pnpm --filter @linxin666/dsh-pet build
+```
+
+浏览器 bundle 使用 `window.__ModuleLoader__.load` 契约，React 和 Cordis 等依赖由 DSH loader 提供；CSS Modules 由 Lightning CSS 打进客户端 bundle。
 
 ## License
 

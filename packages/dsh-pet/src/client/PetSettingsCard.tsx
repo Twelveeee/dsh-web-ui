@@ -4,15 +4,21 @@
  * `settings.plugin.item` slot the plugin-configuration section renders.
  */
 
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SettingsScope, SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
-import { PluginSettingsCard, ValueField, BooleanField } from './PluginSettingsCard.tsx'
+import { PluginSettingsCard, ValueField, BooleanField, ChoiceField } from './PluginSettingsCard.tsx'
 import { CardForm, booleanField, numberField, textField, type CardActions, type CardShell, type FieldState as CardFieldState } from './settings-form.ts'
 
 /** The pet's settings fields this card edits (the namespace's full schema). */
 export interface PetSettings {
-  /** Master switch for the plugin. */
-  enabled?: boolean
+  /** Active pet identity. */
+  petId?: string
+  /** Available pets shown by the settings selector. */
+  pets?: {
+    id: string
+    name: string
+    description?: string
+  }[]
   /** Master switch. */
   visible?: boolean
   /** Scale of the rendered pet in px (sprite cell height). */
@@ -27,8 +33,14 @@ export interface PetSettings {
 
 /** What the pet settings card renders. */
 export interface PetSettingsCardState extends CardShell {
-  /** Plugin master switch. */
-  enabled: CardFieldState
+  /** Active pet identity. */
+  petId: string
+  /** Available pets shown by the settings selector. */
+  pets: NonNullable<PetSettings['pets']>
+  /** True while a pet switch is crossing the wire. */
+  switchingPet: boolean
+  /** Whether the latest pet switch failed. */
+  switchPetFailed: boolean
   /** Master switch. */
   visible: CardFieldState
   /** Pet scale. */
@@ -47,17 +59,20 @@ export interface PetSettingsCardFace extends CardActions {
     /** Card snapshot bound by the renderer as usePetSettingsCard. */
     petSettingsCard: SnapshotStore<PetSettingsCardState>
   }
+  /** Switch the active pet immediately. */
+  selectPet: (petId: string) => void
 }
 
 /** Bridges the `pet` scope onto the card's staged form. */
 export class PetSettingsCardController {
   private readonly form: CardForm<PetSettings>
   private readonly store: SnapshotStore<PetSettingsCardState>
+  private switchingPet = false
+  private switchPetFailed = false
 
   /** @param scope - the bound settings scope for the `pet` namespace. */
-  constructor(scope: SettingsScope<PetSettings>) {
+  constructor(private readonly scope: SettingsScope<PetSettings>) {
     this.form = new CardForm(scope, [
-      booleanField('enabled'),
       booleanField('visible'),
       numberField('size'),
       numberField('right'),
@@ -65,12 +80,24 @@ export class PetSettingsCardController {
       textField('name'),
     ])
     this.store = this.form.bind(() => this.projection())
+    let activePetId = scope.getSnapshot().value?.petId
+    scope.subscribe(() => {
+      const nextPetId = scope.getSnapshot().value?.petId
+      if (activePetId !== undefined && nextPetId !== undefined && activePetId !== nextPetId) {
+        this.form.discard()
+      }
+      activePetId = nextPetId
+    })
   }
 
   private projection(): PetSettingsCardState {
+    const value = this.scope.getSnapshot().value
     return {
       ...this.form.shell(),
-      enabled: this.form.field('enabled'),
+      petId: value?.petId ?? '',
+      pets: value?.pets ?? [],
+      switchingPet: this.switchingPet,
+      switchPetFailed: this.switchPetFailed,
       visible: this.form.field('visible'),
       size: this.form.field('size'),
       right: this.form.field('right'),
@@ -84,14 +111,33 @@ export class PetSettingsCardController {
    * @returns the card's snapshot and its form actions.
    */
   inject(): PetSettingsCardFace {
-    return { hooks: { petSettingsCard: this.store }, ...this.form.actions() }
+    return {
+      hooks: { petSettingsCard: this.store },
+      ...this.form.actions(),
+      selectPet: (petId) => { void this.selectPet(petId) },
+    }
+  }
+
+  private async selectPet(petId: string): Promise<void> {
+    const current = this.scope.getSnapshot().value?.petId
+    if (petId === '' || petId === current || this.switchingPet) return
+    this.switchingPet = true
+    this.switchPetFailed = false
+    this.store.set(this.projection())
+    try {
+      await this.scope.set('petId', petId)
+    } catch {
+      this.switchPetFailed = true
+    } finally {
+      this.switchingPet = false
+      this.store.set(this.projection())
+    }
   }
 }
 
 /** Props the renderer binds for the pet settings card. */
 export type PetSettingsCardProps =
-  PropsRuntime<'web-ui.plugin.item'>
-  & PropsLocale<'pet'>
+  PropsLocale<'pet'>
   & InjectFace<PetSettingsCardFace>
 
 /**
@@ -118,23 +164,25 @@ export function PetSettingsCard(props: PetSettingsCardProps) {
       onSave={props.save}
       onDiscard={props.discard}
     >
-      <BooleanField
-        id="settings-pet-enabled"
-        label={t('settings.enabled')}
-        hint={t('settings.enabledHint')}
-        inheritLabel={t('settings.inherit')}
-        onLabel={t('settings.on')}
-        offLabel={t('settings.off')}
-        {...fieldProps}
-        {...state.enabled}
-        onEdit={(text) => { props.edit('enabled', text) }}
-        onReset={() => { props.resetField('enabled') }}
+      <ChoiceField
+        id="settings-pet-selection"
+        label={t('settings.pet')}
+        hint={state.dirty ? t('settings.petHintUnsaved') : t('settings.petHint')}
+        value={state.petId}
+        options={state.pets.map(pet => ({
+          value: pet.id,
+          label: pet.name,
+          ...(pet.description === undefined ? {} : { description: pet.description }),
+        }))}
+        disabled={!state.writable || state.saving || state.switchingPet || state.dirty}
+        failed={state.switchPetFailed}
+        failedLabel={t('settings.petSwitchFailed')}
+        onEdit={props.selectPet}
       />
       <BooleanField
         id="settings-pet-visible"
         label={t('settings.visible')}
         hint={t('settings.visibleHint')}
-        inheritLabel={t('settings.inherit')}
         onLabel={t('settings.on')}
         offLabel={t('settings.off')}
         {...fieldProps}

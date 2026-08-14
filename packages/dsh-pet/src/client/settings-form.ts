@@ -66,7 +66,7 @@ export interface CardShell {
 export interface CardActions {
   /** Stage draft text for one field. */
   edit: (field: string, text: string) => void
-  /** Stage a clear, so saving lets the field re-inherit the composition layer. */
+  /** Stage a clear, so saving restores the field's default value. */
   resetField: (field: string) => void
   /** Write every staged edit, then re-seed from what the Host accepted. */
   save: () => void
@@ -198,13 +198,16 @@ export class CardForm<T> {
         this.stage(field, { text: this.specOf(field).format(this.baseValue(field)), clear: true })
       },
       save: () => { void this.save() },
-      discard: () => {
-        if (this.staged.size === 0 && !this.failed) return
-        this.staged.clear()
-        this.failed = false
-        this.publish()
-      },
+      discard: () => { this.discard() },
     }
+  }
+
+  /** Drop staged edits, including when a card changes the entity it edits. */
+  discard(): void {
+    if (this.staged.size === 0 && !this.failed) return
+    this.staged.clear()
+    this.failed = false
+    this.publish()
   }
 
   /**
@@ -259,7 +262,7 @@ export class CardForm<T> {
 
   private async store(field: string, value: unknown): Promise<boolean> {
     await this.scope.set(field, value)
-    return this.userLayer()?.[field] === value
+    return this.sectionValue(field) === value
   }
 
   private stage(field: string, edit: StagedEdit): void {

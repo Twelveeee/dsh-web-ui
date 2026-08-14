@@ -1,8 +1,8 @@
 /**
  * dsh-pet host half — mounts the pet service and its HTTP routes. The
- * browser half (the `./client` entry) renders the whale-girl companion and
+ * browser half (the `./client` entry) renders the selected companion and
  * drives it through the same-origin `/api/pet/*` JSON endpoints plus the
- * `/pet/whale/*` media route. Install via `dsh plugin --profile web add
+ * `/pet/<petId>/*` media routes. Install via `dsh plugin --profile web add
  * link:<dsh-web-ui>/packages/dsh-pet`; the cordis.patch.yml inserts this plugin row.
  * @module @linxin666/dsh-pet
  */
@@ -13,6 +13,7 @@ import type {} from '@deepseek-ai/dsh-host-webserver'
 import z from 'schemastery'
 import { PetService, PET_SETTINGS_NAMESPACE, type PetConfig, type PetSettingsSection } from './service.ts'
 import { makePetRoutes, petPackageRoot } from './routes.ts'
+import { ensurePetRegistry, loadPetRegistry } from './pets.ts'
 import {
   DEFAULT_PET_NAME,
   DISPLAY_INSET_MAX,
@@ -68,6 +69,15 @@ export {
   savePetPersist,
 } from './persist.ts'
 export type { PetDisplayConfig, PetPersist } from './persist.ts'
+export {
+  DEFAULT_PET_ID,
+  ensurePetRegistry,
+  FALLBACK_PET_REGISTRY,
+  isPetId,
+  loadPetRegistry,
+  petOf,
+} from './pets.ts'
+export type { PetFrames, PetManifest, PetRegistry } from './pets.ts'
 
 export {
   makePetRoutes,
@@ -94,7 +104,9 @@ export const PET_SETTINGS_SCHEMA = z.object({
 
 /** Register the pet service and its API + asset routes on the context. */
 export function apply(ctx: Context, config: PetConfig = {}): void {
-  const service = new PetService(ctx, config)
+  const packageRoot = petPackageRoot(import.meta.url)
+  const registry = ensurePetRegistry(loadPetRegistry(packageRoot))
+  const service = new PetService(ctx, config, registry)
 
   // The settings surface edits the display config through the `pet`
   // namespace. The composition `base` starts as the persisted pet.json
@@ -118,7 +130,7 @@ export function apply(ctx: Context, config: PetConfig = {}): void {
   // dsh-remote-web-ui's /api/pair family). The routes are registered while
   // the plugin is enabled; toggling the setting off makes the pet API
   // disappear until it is re-enabled.
-  const routes = makePetRoutes({ service, packageRoot: petPackageRoot(import.meta.url) })
+  const routes = makePetRoutes({ service, packageRoot, registry })
   let disposeRoutes: (() => void) | undefined
   const syncRoutes = (): void => {
     const enabled = current().enabled ?? true

@@ -10,6 +10,7 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { AFFINITY_MAX, emptyAffinity, type AffinityState } from './affinity.ts'
 import { defaultTreatConfig, emptyTreatLedger, type TreatLedger } from './treats.ts'
+import { DEFAULT_PET_ID, isPetId } from './pets.ts'
 
 /** Display configuration the user can tweak. */
 export interface PetDisplayConfig {
@@ -37,23 +38,29 @@ export const DISPLAY_INSET_MAX = 10_000
 
 /** Everything persisted for the pet. */
 export interface PetPersist {
-  /** User-customizable pet display name. */
-  name: string
+  /** Currently selected pet id (registry id, see pets.ts). */
+  petId: string
+  /** User-customized display names per pet id; absent → manifest displayName. */
+  names: Record<string, string>
   affinity: AffinityState
-  /** Treat (小鱼干) stock ledger. */
+  /** Shared treat stock ledger. */
   treats: TreatLedger
   display: PetDisplayConfig
 }
 
 /** Default pet name (used until the user renames the pet). */
-export const DEFAULT_PET_NAME = '鲸鱼娘'
+export const DEFAULT_PET_NAME = 'Whale Girl'
 
 /** Name constraints. */
 export const PET_NAME_MAX_LENGTH = 20
 
+/** Legacy on-disk shape used before per-pet names were introduced. */
+type PetPersistFile = Partial<PetPersist> & { name?: unknown }
+
 export function emptyPersist(): PetPersist {
   return {
-    name: DEFAULT_PET_NAME,
+    petId: DEFAULT_PET_ID,
+    names: {},
     affinity: emptyAffinity(),
     treats: emptyTreatLedger(),
     display: { ...defaultDisplayConfig },
@@ -79,7 +86,7 @@ function clamp(value: number, max: number): number {
 export function loadPetPersist(dir: string = petHomeDir()): PetPersist {
   try {
     const raw = readFileSync(join(dir, 'pet.json'), 'utf8')
-    const parsed = JSON.parse(raw) as Partial<PetPersist>
+    const parsed = JSON.parse(raw) as PetPersistFile
     const base = emptyPersist()
     const rawAffinity = (parsed.affinity ?? {}) as Partial<AffinityState>
     const affinity: AffinityState = {
@@ -105,10 +112,38 @@ export function loadPetPersist(dir: string = petHomeDir()): PetPersist {
       right: Math.round(clamp(finiteNum(rawDisplay.right, base.display.right), DISPLAY_INSET_MAX)),
       bottom: Math.round(clamp(finiteNum(rawDisplay.bottom, base.display.bottom), DISPLAY_INSET_MAX)),
     }
+    const rawNames = typeof parsed.names === 'object'
+      && parsed.names !== null
+      && !Array.isArray(parsed.names)
+      ? parsed.names as Record<string, unknown>
+      : {}
+    const names: Record<string, string> = {}
+    for (const [id, value] of Object.entries(rawNames)) {
+      if (!isPetId(id)) continue
+      if (typeof value !== 'string') continue
+      const trimmed = value.trim()
+      if (trimmed === '' || trimmed.length > PET_NAME_MAX_LENGTH) continue
+      names[id] = trimmed
+    }
+    // Legacy migration: pre-multi-pet files stored a single `name` field that
+    // referred to the whale (the only pet back then). Seed it as the whale's
+    // custom name unless the record already carries one.
+    if (names[DEFAULT_PET_ID] === undefined) {
+      const legacy = parsed.name
+      if (typeof legacy === 'string') {
+        const trimmed = legacy.trim()
+        if (trimmed !== '' && trimmed.length <= PET_NAME_MAX_LENGTH) {
+          names[DEFAULT_PET_ID] = trimmed
+        }
+      }
+    }
+    const rawPetId = parsed.petId
+    const petId = isPetId(rawPetId)
+      ? rawPetId
+      : base.petId
     return {
-      name: typeof parsed.name === 'string' && parsed.name.trim() !== ''
-        ? parsed.name
-        : base.name,
+      petId,
+      names,
       affinity,
       treats,
       display,

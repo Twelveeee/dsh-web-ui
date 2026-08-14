@@ -4,8 +4,8 @@
  * it must not ride a session-scoped slot — on the new-conversation screen no
  * session exists to scope a slot by, and the pet would vanish (issue #48).
  * The client half therefore mounts this entry straight onto `document.body`
- * (see index.ts): while visible it renders the floating WhalePet (a portal),
- * while hidden it renders a fixed-position summon button.
+ * (see index.ts): while visible it renders the floating PetCompanion (a portal),
+ * while hidden it renders nothing. Visibility is restored from Settings.
  * @module @linxin666/dsh-pet/client/PetDockEntry
  */
 
@@ -13,9 +13,8 @@ import { useEffect, useSyncExternalStore, type ReactElement } from 'react'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { PetDisplayConfig } from '../persist.ts'
 import type { PetStoreInstance } from './pet-store.ts'
-import { WhalePet } from './WhalePet.tsx'
+import { PetCompanion } from './PetCompanion.tsx'
 import { NS } from './locales.ts'
-import styles from './pet.module.css'
 
 /** Injected actions handed to the dock entry component. */
 export interface PetInjected {
@@ -23,14 +22,12 @@ export interface PetInjected {
   store: PetStoreInstance
   /** Ensure the first snapshot is fetched (called on mount). */
   ensure: () => void
-  /** Pet the whale girl (click). */
+  /** Pet the active companion (click). */
   pet: () => void
-  /** Feed the whale girl. */
+  /** Feed the active companion. */
   feed: () => void
-  /** Hide the whale girl. */
+  /** Hide the active companion. */
   hide: () => void
-  /** Summon the hidden whale girl back. */
-  summon: () => void
   /** Persist a drag position. */
   dragEnd: (right: number, bottom: number) => void
   /** Rename the pet (persisted by the host). */
@@ -47,9 +44,9 @@ export type PetDockEntryProps =
 const DEFAULT_DISPLAY: PetDisplayConfig = { visible: true, size: 160, right: 24, bottom: 20 }
 
 /**
- * Dock entry: while the pet is visible, mount the floating WhalePet (it
- * portals itself onto document.body); while hidden, render the summon
- * button so the pet can always come back. The store is the plugin-owned
+ * Dock entry: while the pet is visible, mount the floating PetCompanion (it
+ * portals itself onto document.body); while hidden, render nothing so the
+ * page stays clear until visibility is restored from Settings. The store is the plugin-owned
  * single instance — the slot system provides none because the pet is
  * host-global, not session-scoped.
  */
@@ -67,7 +64,7 @@ export function PetDockEntry(props: PetDockEntryProps): ReactElement {
   if (visible) {
     return (
       <span data-pet-dock data-testid="pet-dock">
-        <WhalePet
+        <PetCompanion
           snapshot={snapshot}
           display={snapshot?.display ?? DEFAULT_DISPLAY}
           feedback={feedback}
@@ -82,21 +79,5 @@ export function PetDockEntry(props: PetDockEntryProps): ReactElement {
       </span>
     )
   }
-  const display = snapshot?.display ?? DEFAULT_DISPLAY
-  return (
-    <button
-      type="button"
-      className={styles.summon}
-      style={{
-        position: 'fixed',
-        right: display.right,
-        bottom: display.bottom,
-        zIndex: 2147483000,
-      }}
-      onClick={props.summon}
-      data-testid="pet-summon"
-    >
-      {props.t('pet.summon', { name: snapshot?.name ?? '鲸鱼娘' })}
-    </button>
-  )
+  return <></>
 }

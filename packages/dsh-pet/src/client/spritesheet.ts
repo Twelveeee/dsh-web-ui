@@ -1,13 +1,13 @@
 /**
- * Whale-girl spritesheet geometry and animation tracks.
+ * Shared pet spritesheet geometry and animation tracks.
  *
- * The atlas follows the Codex/hatch-pet contract: 8 columns × 9 rows of
- * 192×208 cells (1536×1872 total), rows in this order:
+ * Atlases follow the Codex/hatch-pet contract: 8 columns × at least 9 rows
+ * of 192×208 cells. The first 9 rows are ordered as follows:
  *   0 idle, 1 running-right, 2 running-left, 3 waving, 4 jumping,
  *   5 failed, 6 waiting, 7 running, 8 review
  *
  * Frame counts and per-frame durations are per-track definitions below; the
- * whale-girl atlas is produced by the hatch-pet pipeline, so calibrate
+ * pet atlases are produced by the hatch-pet pipeline, so calibrate
  * `TRACKS` against the actual run (`pet_request.json` frame counts) when the
  * asset lands. Tracks that do not loop hand off to `fallback`.
  * @module @linxin666/dsh-pet/client/spritesheet
@@ -34,10 +34,9 @@ export interface TrackDef {
 }
 
 /**
- * Track definitions for the whale-girl. Durations are tuned for a soft,
- * slow-healing feel (roughly 2.5× the earlier fast draft — the pet should
- * breathe, not race); calibrate frame counts against the hatch-pet run when
- * the asset lands (rows may carry 4–8 frames).
+ * Shared track definitions for all registered pets. Durations are tuned for
+ * a calm feel (roughly 2.5× the earlier fast draft); calibrate frame counts
+ * against the hatch-pet run when an asset lands (rows may carry 4–8 frames).
  */
 export const TRACKS: Record<PetAnimation, TrackDef> = {
   idle: { frames: [0, 1, 2, 3, 4, 5], durations: [400, 400, 500, 400, 400, 500], loop: true },
@@ -88,7 +87,7 @@ export function trackDuration(track: TrackDef): number {
  * atlas for non-transparent cells (hatch-pet rows may hold 4–8 frames; the
  * unused trailing cells are fully transparent). Rows whose every sample is
  * transparent report 0.
- * @param image - the fully decoded spritesheet (natural size 1536×1872).
+ * @param image - the fully decoded 9-row or 11-row spritesheet.
  * @returns per-row frame counts, length 9.
  */
 export function detectFrameCounts(image: HTMLImageElement): number[] {

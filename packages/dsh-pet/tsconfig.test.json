@@ -16,6 +16,8 @@
   },
   "include": [
     "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/client/css-modules.d.ts",
     "src/affinity.ts",
     "src/treats.ts",
     "src/persist.ts",

@@ -14,6 +14,12 @@
   touch-action: none;
 }
 
+.sprite:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+
 .bubble {
   position: absolute;
   bottom: 100%;
@@ -72,7 +78,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 132px;
+  min-width: 196px;
+  max-width: min(280px, calc(100vw - 24px));
 }
 
 /* 面板底边与图标顶边之间的 hover 桥接（issue #49）：
@@ -156,34 +163,6 @@
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.85);
 }
 
-.summon {
-  border: 1px dashed rgba(125, 211, 252, 0.6);
-  background: rgba(15, 23, 42, 0.75);
-  color: #7dd3fc;
-  border-radius: 999px;
-  padding: 2px 10px;
-  font-size: 11px;
-  cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease,
-    background 120ms ease, box-shadow 120ms ease;
-}
-
-.summon:hover {
-  border-color: rgba(125, 211, 252, 0.95);
-  color: #bae6fd;
-  background: rgba(15, 23, 42, 0.9);
-}
-
-.summon:active {
-  color: #7dd3fc;
-  border-color: rgba(125, 211, 252, 0.8);
-}
-
-.summon:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.85);
-}
-
 /* Reduced motion: freeze the reaction bubble and kill the overlay transitions
    so the pet's motion is static or minimal without hiding interaction. */
 @media (prefers-reduced-motion: reduce) {
@@ -192,8 +171,7 @@
     opacity: 1;
   }
 
-  .action,
-  .summon {
+  .action {
     transition: none;
   }
 }

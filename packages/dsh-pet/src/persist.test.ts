@@ -5,7 +5,6 @@ import { join } from 'node:path'
 import { AFFINITY_MAX, emptyAffinity } from './affinity.ts'
 import { defaultTreatConfig, emptyTreatLedger } from './treats.ts'
 import {
-  DEFAULT_PET_NAME,
   DISPLAY_INSET_MAX,
   DISPLAY_SIZE_MAX,
   DISPLAY_SIZE_MIN,
@@ -43,7 +42,9 @@ describe('loadPetPersist', () => {
     const dir = tempDir()
     try {
       const data = {
-        name: '泡泡',
+        ...emptyPersist(),
+        petId: 'fox',
+        names: { whale: '泡泡', fox: 'Fox' },
         affinity: { ...emptyAffinity(), points: 42, pets: 3, feeds: 1, turns: 10 },
         treats: { ...emptyTreatLedger(), treats: 7, lastTreatGrantAt: 1234, turnsAtLastTreatGrant: 9 },
         display: { visible: false, size: 200, right: 10, bottom: 40 },
@@ -59,13 +60,15 @@ describe('loadPetPersist', () => {
     const dir = tempDir()
     try {
       writeFileSync(join(dir, 'pet.json'), JSON.stringify({
-        name: '   ',
+        petId: '../bad',
+        names: { whale: '   ', '../bad': '越界', fox: 'Fox' },
         affinity: { points: 9999, lastPetAt: -5, lastFeedAt: 'x', pets: -1, feeds: 1.5, turns: 0 },
         treats: { treats: 150, lastTreatGrantAt: -1, turnsAtLastTreatGrant: 0 },
         display: { visible: 'yes', size: -10, right: 1e12, bottom: 20 },
       }), 'utf8')
       const loaded = loadPetPersist(dir)
-      expect(loaded.name).toBe(DEFAULT_PET_NAME)
+      expect(loaded.petId).toBe('whale')
+      expect(loaded.names).toEqual({ fox: 'Fox' })
       expect(loaded.affinity.points).toBe(AFFINITY_MAX)
       expect(loaded.affinity.lastPetAt).toBe(0)
       expect(loaded.affinity.lastFeedAt).toBe(0)
@@ -77,6 +80,16 @@ describe('loadPetPersist', () => {
       expect(loaded.display.size).toBe(DISPLAY_SIZE_MIN) // -10 clamped to min
       expect(loaded.display.right).toBe(DISPLAY_INSET_MAX) // 1e12 clamped to max
       expect(loaded.display.bottom).toBe(20) // finite in-range passes through
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('migrates the legacy single name to the built-in whale', () => {
+    const dir = tempDir()
+    try {
+      writeFileSync(join(dir, 'pet.json'), JSON.stringify({ name: '  泡泡  ' }), 'utf8')
+      expect(loadPetPersist(dir).names).toEqual({ whale: '泡泡' })
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }

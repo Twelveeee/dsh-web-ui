@@ -142,8 +142,53 @@ export interface FieldProps {
   disabled: boolean
   /** Stage draft text. */
   onEdit: (text: string) => void
-  /** Stage a clear so the field re-inherits the composition layer. */
+  /** Stage a clear so the field returns to its default value. */
   onReset: () => void
+}
+
+/** One option rendered by a settings choice field. */
+export interface ChoiceOption {
+  /** Durable option value. */
+  value: string
+  /** User-facing option label. */
+  label: string
+  /** Optional extra context exposed as a native tooltip. */
+  description?: string
+}
+
+/** An immediate settings choice, used for selecting the active pet. */
+export function ChoiceField(props: {
+  id: string
+  label: string
+  hint: string
+  value: string
+  options: readonly ChoiceOption[]
+  disabled: boolean
+  failed: boolean
+  failedLabel: string
+  onEdit: (value: string) => void
+}) {
+  return (
+    <div className={css.field}>
+      <label className={css.label} htmlFor={props.id}>{props.label}</label>
+      <select
+        id={props.id}
+        className={css.select}
+        value={props.value}
+        disabled={props.disabled}
+        onChange={(event) => { props.onEdit(event.target.value) }}
+      >
+        {props.options.map(option => (
+          <option key={option.value} value={option.value} title={option.description}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <p className={props.failed ? css.invalid : css.hint} role={props.failed ? 'status' : undefined}>
+        {props.failed ? props.failedLabel : props.hint}
+      </p>
+    </div>
+  )
 }
 
 /** A staged value field. `numeric` only hints the keypad: which drafts a field accepts is decided by its spec. */
@@ -191,10 +236,8 @@ export function ValueField(props: FieldProps & {
   )
 }
 
-/** A staged boolean field: 继承 / 开 / 关. */
+/** A staged boolean field with two explicit states. */
 export function BooleanField(props: FieldProps & {
-  /** Copy for the inherit option. */
-  inheritLabel: string
   /** Copy for the on option. */
   onLabel: string
   /** Copy for the off option. */
@@ -227,7 +270,6 @@ export function BooleanField(props: FieldProps & {
         disabled={props.disabled}
         onChange={(event) => { props.onEdit(event.target.value) }}
       >
-        <option value="">{props.inheritLabel}</option>
         <option value="true">{props.onLabel}</option>
         <option value="false">{props.offLabel}</option>
       </select>

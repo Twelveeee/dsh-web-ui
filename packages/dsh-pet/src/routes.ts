@@ -1,7 +1,7 @@
 /**
  * Pet HTTP routes — the browser half talks to the host through plain
- * same-origin JSON endpoints (`/api/pet/*`) and loads the whale-girl atlas
- * from `/pet/whale/*`. The `/plugins/` endpoint only serves client bundles
+ * same-origin JSON endpoints (`/api/pet/*`) and loads registered atlases
+ * from `/pet/<petId>/*`. The `/plugins/` endpoint only serves client bundles
  * and RPC domains are platform-registered, so the pet serves its own API
  * and media — the same pattern as dsh-remote-web-ui's `/api/pair` family.
  * @module @linxin666/dsh-pet/routes
@@ -14,14 +14,15 @@ import { fileURLToPath } from 'node:url'
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { PetService } from './service.ts'
 import type { PetInteraction } from './affinity.ts'
+import type { PetRegistry } from './pets.ts'
 
 /** Browser-facing base path of the pet API. */
 export const PET_API_PREFIX = '/api/pet'
 
-/** Browser-facing base path of the pet asset routes. */
-export const PET_ASSET_PREFIX = '/pet/whale'
+/** Browser-facing base path of the pet asset routes (`/pet/<petId>/…`). */
+export const PET_ASSET_PREFIX = '/pet'
 
-/** Relative (to package root) asset files exposed under the prefix. */
+/** Relative (to each pet's asset dir) asset files exposed under the prefix. */
 const ASSET_FILES = [
   { name: 'spritesheet.webp', mime: 'image/webp' },
   { name: 'pet.json', mime: 'application/json' },
@@ -112,15 +113,24 @@ function postRoute(path: string, run: (body: Record<string, unknown>) => Promise
   }
 }
 
-/** Build the full route family (API + assets) for one service + package root. */
-export function makePetRoutes(deps: { service: PetService; packageRoot: string }): WebRoute[] {
-  const { service, packageRoot } = deps
+/** Build the full route family (API + per-pet assets) for one service + registry. */
+export function makePetRoutes(deps: {
+  service: PetService
+  packageRoot: string
+  registry: PetRegistry
+}): WebRoute[] {
+  const { service, packageRoot, registry } = deps
   const apiRoutes: WebRoute[] = [
     getRoute(`${PET_API_PREFIX}/state`, () => service.state()),
     postRoute(`${PET_API_PREFIX}/interact`, (body) => {
       const kind = body.kind as PetInteraction | undefined
       if (kind !== 'pet' && kind !== 'feed') return Promise.reject(new Error('invalid-kind'))
       return service.interact(kind)
+    }),
+    postRoute(`${PET_API_PREFIX}/set-pet`, (body) => {
+      const petId = body.petId
+      if (typeof petId !== 'string') return Promise.reject(new Error('invalid-pet-id'))
+      return service.setPet(petId)
     }),
     postRoute(`${PET_API_PREFIX}/set-visible`, (body) => {
       const visible = body.visible
@@ -140,32 +150,33 @@ export function makePetRoutes(deps: { service: PetService; packageRoot: string }
     }),
   ]
 
-  const assetRoutes: WebRoute[] = ASSET_FILES.map((file): WebRoute => ({
-    kind: 'exact',
-    path: `${PET_ASSET_PREFIX}/${file.name}`,
-    handler: (req: IncomingMessage, res: ServerResponse): Promise<void> | void => {
-      if (req.method !== 'GET' && req.method !== 'HEAD') {
-        res.writeHead(405)
-        res.end()
-        return
-      }
-      return readFile(join(packageRoot, 'assets', 'whale', file.name)).then((body) => {
-        res.writeHead(200, {
-          'content-type': file.mime,
-          'content-length': String(body.byteLength),
-          'cache-control': 'no-cache',
-        })
-        if (req.method === 'HEAD') {
+  const assetRoutes: WebRoute[] = registry.pets.flatMap((pet): WebRoute[] =>
+    ASSET_FILES.map((file): WebRoute => ({
+      kind: 'exact',
+      path: `${PET_ASSET_PREFIX}/${pet.id}/${file.name}`,
+      handler: (req: IncomingMessage, res: ServerResponse): Promise<void> | void => {
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
+          res.writeHead(405)
           res.end()
           return
         }
-        res.end(body)
-      }, () => {
-        res.writeHead(404)
-        res.end()
-      })
-    },
-  }))
+        return readFile(join(packageRoot, 'assets', pet.id, file.name)).then((body) => {
+          res.writeHead(200, {
+            'content-type': file.mime,
+            'content-length': String(body.byteLength),
+            'cache-control': 'no-cache',
+          })
+          if (req.method === 'HEAD') {
+            res.end()
+            return
+          }
+          res.end(body)
+        }, () => {
+          res.writeHead(404)
+          res.end()
+        })
+      },
+    })))
 
   return [...apiRoutes, ...assetRoutes]
 }

@@ -26,9 +26,11 @@ import {
   DISPLAY_SIZE_MIN,
   DISPLAY_INSET_MAX,
   PET_NAME_MAX_LENGTH,
+  DEFAULT_PET_NAME,
   type PetDisplayConfig,
   type PetPersist,
 } from './persist.ts'
+import { DEFAULT_PET_ID, ensurePetRegistry, FALLBACK_PET_REGISTRY, petOf, type PetRegistry } from './pets.ts'
 import {
   defaultTreatConfig,
   settleTreatGrants,
@@ -85,6 +87,15 @@ export interface PetStateView {
   bubble?: string
   phase: PetStateSnapshot['phase']
   sessionActive: boolean
+  /** Currently selected pet id. */
+  petId: string
+  /** Every available pet with its resolved display name (switcher data). */
+  pets: {
+    id: string
+    name: string
+    defaultName: string
+    description?: string
+  }[]
   /** Affinity ledger snapshot. */
   affinity: {
     points: number
@@ -102,7 +113,7 @@ export interface PetStateView {
   display: PetDisplayConfig
   /** User-customizable pet display name. */
   name: string
-  /** Treat (小鱼干) stock snapshot. */
+  /** Shared treat stock snapshot. */
   treats: {
     /** Stocked treats now. */
     stocked: number
@@ -147,14 +158,16 @@ export class PetService extends Service {
   private readonly affinityConfig: AffinityConfig
   private readonly treatConfig: TreatConfig
   private readonly persistDir: string
+  private readonly registry: PetRegistry
   private persist: PetPersist
   private lastTurnRewardAt = 0
   private enabled: boolean
   private disposeActivity: (() => void) | undefined
 
-  constructor(ctx: Context, config: PetConfig = {}) {
+  constructor(ctx: Context, config: PetConfig = {}, registry: PetRegistry = FALLBACK_PET_REGISTRY) {
     super(ctx, 'pet')
     this.persistDir = config.persistDir ?? petHomeDir()
+    this.registry = ensurePetRegistry(registry)
     this.affinityConfig = { ...defaultAffinityConfig, ...(config.affinity ?? {}) }
     this.treatConfig = { ...defaultTreatConfig, ...(config.treats ?? {}) }
     this.machine = new PetStateMachine({
@@ -162,6 +175,7 @@ export class PetService extends Service {
       ...(config.state ?? {}),
     })
     this.persist = loadPetPersist(this.persistDir)
+    this.persist.petId = this.currentPetId()
     this.enabled = config.enabled ?? true
 
     this.syncActivity()
@@ -182,9 +196,33 @@ export class PetService extends Service {
     return { ...this.persist.display }
   }
 
+  /** Currently selected pet id, normalized to a registry-known id. */
+  currentPetId(): string {
+    if (petOf(this.registry, this.persist.petId) !== undefined) return this.persist.petId
+    if (petOf(this.registry, DEFAULT_PET_ID) !== undefined) return DEFAULT_PET_ID
+    return this.registry.pets[0]?.id ?? DEFAULT_PET_ID
+  }
+
+  /** Resolved display name of one pet (custom name → manifest default). */
+  resolveName(petId: string): string {
+    const custom = this.persist.names[petId]?.trim()
+    if (custom !== undefined && custom !== '') return custom
+    return petOf(this.registry, petId)?.displayName ?? DEFAULT_PET_NAME
+  }
+
   /** Current persisted pet name (read-only view). */
   petName(): string {
-    return this.persist.name
+    return this.resolveName(this.currentPetId())
+  }
+
+  /** RPC: switch the displayed pet. */
+  async setPet(petId: string): Promise<{ ok: true; petId: string } | { ok: false; error: string }> {
+    if (petOf(this.registry, petId) === undefined) return { ok: false, error: 'unknown-pet' }
+    if (this.persist.petId === petId) return { ok: true, petId }
+    this.persist = { ...this.persist, petId }
+    this.flush()
+    this.syncSettingsFromPet()
+    return { ok: true, petId }
   }
 
   /** Start or stop the session-activity listeners that drive the pet. */
@@ -241,7 +279,7 @@ export class PetService extends Service {
       if (!consume.ok) {
         const affinity = this.affinityView(this.persist.affinity)
         return {
-          reaction: '没有小鱼干了，多陪鲸鱼娘工作一会儿吧～',
+          reaction: '零食吃完了，多陪宠物工作一会儿吧～',
           delta: 0,
           affinity,
         }
@@ -276,12 +314,13 @@ export class PetService extends Service {
     return { ok: true, display: this.persist.display }
   }
 
-  /** RPC: rename the pet (trimmed, 1–20 chars). */
+  /** RPC: rename the current pet (trimmed, 1–20 chars). */
   async setName(name: string): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
     const trimmed = name.trim()
     if (trimmed === '') return { ok: false, error: 'name-empty' }
     if (trimmed.length > PET_NAME_MAX_LENGTH) return { ok: false, error: 'name-too-long' }
-    this.persist = { ...this.persist, name: trimmed }
+    const petId = this.currentPetId()
+    this.persist = { ...this.persist, names: { ...this.persist.names, [petId]: trimmed } }
     this.flush()
     this.syncSettingsFromPet()
     return { ok: true, name: trimmed }
@@ -299,7 +338,13 @@ export class PetService extends Service {
     next.size = Math.round(Math.min(DISPLAY_SIZE_MAX, Math.max(DISPLAY_SIZE_MIN, section.size)))
     next.right = Math.round(Math.min(DISPLAY_INSET_MAX, Math.max(0, section.right)))
     next.bottom = Math.round(Math.min(DISPLAY_INSET_MAX, Math.max(0, section.bottom)))
-    this.persist = { ...this.persist, display: next, name: section.name.trim() }
+    const petId = this.currentPetId()
+    const trimmed = section.name.trim()
+    this.persist = {
+      ...this.persist,
+      display: next,
+      ...(trimmed === '' ? {} : { names: { ...this.persist.names, [petId]: trimmed } }),
+    }
     this.flush()
   }
 
@@ -312,7 +357,7 @@ export class PetService extends Service {
       size: this.persist.display.size,
       right: this.persist.display.right,
       bottom: this.persist.display.bottom,
-      name: this.persist.name,
+      name: this.petName(),
     }).catch(() => {
       // A settings write failure must not break the pet's own persistence.
     })
@@ -354,9 +399,16 @@ export class PetService extends Service {
       ...(snapshot.bubble === undefined ? {} : { bubble: snapshot.bubble }),
       phase: snapshot.phase,
       sessionActive: snapshot.sessionActive,
+      petId: this.currentPetId(),
+      pets: this.registry.pets.map((pet) => ({
+        id: pet.id,
+        name: this.resolveName(pet.id),
+        defaultName: pet.displayName,
+        ...(pet.description === undefined ? {} : { description: pet.description }),
+      })),
       affinity: this.affinityView(this.persist.affinity),
       display: { ...this.persist.display },
-      name: this.persist.name,
+      name: this.petName(),
       treats: {
         stocked: this.persist.treats.treats,
         max: this.treatConfig.maxTreats,

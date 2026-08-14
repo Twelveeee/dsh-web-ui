@@ -31,10 +31,10 @@ export const AFFINITY_MAX = 100
  *  Marker glyphs are plain ASCII (the repo bans all emoji characters);
  *  they read as a growing star trail alongside the rank name. */
 export const AFFINITY_RANKS = [
-  { min: 0, name: '幼鲸', emoji: '*' },
+  { min: 0, name: '初识', emoji: '*' },
   { min: 25, name: '伙伴', emoji: '**' },
   { min: 50, name: '挚友', emoji: '***' },
-  { min: 80, name: '深海羁绊', emoji: '****' },
+  { min: 80, name: '深厚羁绊', emoji: '****' },
 ] as const
 
 /** Interaction tuning (all in points / ms). */
@@ -103,7 +103,7 @@ export function applyInteraction(
   const next = { ...state }
   if (kind === 'pet') {
     if (state.lastPetAt !== 0 && nowMs - state.lastPetAt < config.petCooldownMs) {
-      return { affinity: state, delta: 0, reaction: '摸过头啦，让鲸鱼娘歇口气～', accepted: false }
+      return { affinity: state, delta: 0, reaction: '摸过头啦，让宠物歇口气～', accepted: false }
     }
     next.lastPetAt = nowMs
     next.pets += 1
@@ -111,7 +111,7 @@ export function applyInteraction(
     return {
       affinity: next,
       delta: config.petReward,
-      reaction: '咕噜咕噜～被摸摸好舒服！',
+      reaction: '被摸摸好舒服！',
       accepted: true,
     }
   }
@@ -125,7 +125,7 @@ export function applyInteraction(
     return {
       affinity: next,
       delta: config.feedReward,
-      reaction: '呜哇！小鱼干好好吃！',
+      reaction: '零食好好吃！',
       accepted: true,
     }
   }

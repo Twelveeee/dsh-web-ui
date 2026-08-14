@@ -1,5 +1,5 @@
 /**
- * Treat (小鱼干) economy — pure, clock-injected. The pet's food comes from
+ * Treat economy — pure, clock-injected. The pet's food comes from
  * two sources, both tied to companionship:
  *  - work output: every N completed turns grant one treat;
  *  - time output: every T minutes of wall-clock time grant one treat.
