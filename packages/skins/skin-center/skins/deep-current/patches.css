@@ -24,13 +24,52 @@
   content: "";
   z-index: 0;
   pointer-events: none;
-  background-image:
-    repeating-radial-gradient(ellipse at 58% 56%, transparent 0 27px, var(--deep-current-contour-blue) 28px 29px, transparent 30px 50px),
-    repeating-radial-gradient(ellipse at 73% 44%, transparent 0 36px, var(--deep-current-contour-mint) 37px 38px, transparent 39px 63px);
+  background-image: url("assets/contour-field.svg");
+  background-repeat: repeat-x;
+  background-size: 1440px 810px;
+  background-position: 0 50%;
   position: absolute;
-  inset: -42% -9% -32%;
-  -webkit-mask-image: radial-gradient(ellipse 66% 62% at 60% 54%, #000 0 48%, transparent 82%);
-  mask-image: radial-gradient(ellipse 66% 62% at 60% 54%, #000 0 48%, transparent 82%);
+  inset: -145% -62% -135%;
+  -webkit-mask-image: radial-gradient(ellipse 78% 76% at 58% 53%, #000 0 58%, transparent 93%);
+  mask-image: radial-gradient(ellipse 78% 76% at 58% 53%, #000 0 58%, transparent 93%);
+}
+
+[data-composer-seat]::after {
+  content: "";
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(ellipse 44% 19% at 66% 57%, color-mix(in srgb, var(--deep-current-blue) 18%, transparent), transparent 72%),
+    linear-gradient(104deg, transparent 18%, var(--deep-current-current-band) 42%, color-mix(in srgb, var(--deep-current-blue) 11%, transparent) 56%, transparent 78%);
+  background-repeat: no-repeat;
+  background-size: 140% 100%, 180% 100%;
+  background-position: -25% 50%, 115% 50%;
+  position: absolute;
+  inset: -110% -44% -105%;
+  -webkit-mask-image: radial-gradient(ellipse 72% 68% at 60% 54%, #000 0 46%, transparent 88%);
+  mask-image: radial-gradient(ellipse 72% 68% at 60% 54%, #000 0 46%, transparent 88%);
+}
+
+@keyframes deep-current-contour-flow {
+  to {
+    background-position: 1440px 50%;
+  }
+}
+
+@keyframes deep-current-glow-flow {
+  to {
+    background-position: 125% 50%, -85% 50%;
+  }
+}
+
+[data-phase="hero"] [data-composer-seat]::before {
+  animation: deep-current-contour-flow 18s linear infinite;
+  will-change: background-position;
+}
+
+[data-phase="hero"] [data-composer-seat]::after {
+  animation: deep-current-glow-flow 11s linear infinite;
+  will-change: background-position;
 }
 
 [data-composer-seat] > * {
@@ -54,6 +93,7 @@
   --dsw-alias-label-tertiary: #8cafaa;
   --dsw-alias-label-dimmed: #6d938d;
   --dsw-alias-label-caption: #5d837d;
+  --dsw-alias-label-primary-inverted: #0b2a33;
   --dsw-alias-brand-primary: #63e6be;
   --dsw-alias-brand-text: #baf7e3;
   --dsw-alias-interactive-bg-hover: #ffffff0f;
@@ -85,6 +125,7 @@ body[data-ds-dark-theme] [data-dsh-surface="sidebar"] {
   --dsw-alias-bg-layer-1: #0a222b;
   --dsw-alias-bg-layer-2: #0e2b35;
   --dsw-alias-bg-layer-3: #123641;
+  --dsw-alias-label-primary-inverted: #061820;
   --dsw-specific-sidebar-fill: #061820;
   background-color: #061820;
 }
@@ -95,13 +136,79 @@ body[data-ds-dark-theme] [data-pane="sidebar"] > div {
     linear-gradient(180deg, #061820 0%, #041219 100%);
 }
 
-[data-pane="sidebar"] :is([aria-selected="true"], [aria-current="true"]) {
+body[data-ds-dark-theme] [data-composer-seat]::before {
+  opacity: 0.9;
+  filter: brightness(1.3) saturate(1.12);
+}
+
+/*
+ * The official settings dialog portals through the sidebar subtree. Restore
+ * the main surface tokens at its semantic boundary so the dark sidebar's
+ * light labels never leak onto pearl controls.
+ */
+[data-dsh-surface="settings"] {
+  --dsw-alias-bg-base: #f4f8f7;
+  --dsw-alias-bg-layer-1: #fff;
+  --dsw-alias-bg-layer-2: #eaf2f0;
+  --dsw-alias-bg-layer-3: #ddece9;
+  --dsw-alias-bg-overlay: #fffffff2;
+  --dsw-alias-border-l1: #0b2a3314;
+  --dsw-alias-border-l2: #0b2a3329;
+  --dsw-alias-border-l3: #0b2a3340;
+  --dsw-alias-label-primary: #123139;
+  --dsw-alias-label-primary-bluish: #234f77;
+  --dsw-alias-label-secondary: #3e5b61;
+  --dsw-alias-label-tertiary: #6f898a;
+  --dsw-alias-label-dimmed: #91a7a5;
+  --dsw-alias-label-caption: #9eb2af;
+  --dsw-alias-brand-primary: #2d6cdf;
+  --dsw-alias-brand-text: #2058bd;
+  --dsw-alias-interactive-bg-hover: #2d6cdf12;
+  --dsw-alias-interactive-bg-active: #2d6cdf21;
+  --dsw-alias-interactive-bg-hover-solid: #e1eeeb;
+  --dsw-alias-button-elevated-fill: #fff;
+  --dsw-alias-button-floating-fill: #fff;
+  --dsw-alias-button-floating-hover: #edf5f3;
+  --dsw-alias-button-info-fill: #e2ecff;
+  --dsw-alias-button-info-hover: #d5e3ff;
+  color: #123139;
+}
+
+body[data-ds-dark-theme] [data-dsh-surface="settings"] {
+  --dsw-alias-bg-base: #071a21;
+  --dsw-alias-bg-layer-1: #0c2731;
+  --dsw-alias-bg-layer-2: #123641;
+  --dsw-alias-bg-layer-3: #194650;
+  --dsw-alias-bg-overlay: #0c2731f2;
+  --dsw-alias-border-l1: #bdece31a;
+  --dsw-alias-border-l2: #bdece32e;
+  --dsw-alias-border-l3: #bdece347;
+  --dsw-alias-label-primary: #e9f7f4;
+  --dsw-alias-label-primary-bluish: #cadcff;
+  --dsw-alias-label-secondary: #b3cfca;
+  --dsw-alias-label-tertiary: #7fa49e;
+  --dsw-alias-label-dimmed: #5f8881;
+  --dsw-alias-label-caption: #4f766f;
+  --dsw-alias-brand-primary: #72a2ff;
+  --dsw-alias-brand-text: #bdd1ff;
+  --dsw-alias-interactive-bg-hover: #72a2ff17;
+  --dsw-alias-interactive-bg-active: #72a2ff2b;
+  --dsw-alias-interactive-bg-hover-solid: #194650;
+  --dsw-alias-button-elevated-fill: #123641;
+  --dsw-alias-button-floating-fill: #0c2731;
+  --dsw-alias-button-floating-hover: #194650;
+  --dsw-alias-button-info-fill: #173e5e;
+  --dsw-alias-button-info-hover: #1c4b70;
+  color: #e9f7f4;
+}
+
+[data-pane="sidebar"] :is([aria-selected="true"], [aria-current="true"]):not([data-dsh-surface="settings"] *) {
   color: #dffff5;
   background-color: #63e6be24;
   box-shadow: inset 3px 0 #63e6be;
 }
 
-[data-pane="sidebar"] :is([role="treeitem"], button, a):focus-visible,
+[data-pane="sidebar"] :is([role="treeitem"], button, a):not([data-dsh-surface="settings"] *):focus-visible,
 [data-dsh-part="sidebar-entry"]:focus-visible {
   outline: 2px solid #63e6be;
   outline-offset: 2px;
@@ -155,9 +262,17 @@ textarea[data-phase]::placeholder {
   }
 
   [data-composer-seat]::before {
-    background-image:
-      repeating-radial-gradient(ellipse at 55% 68%, transparent 0 31px, var(--deep-current-contour-blue) 32px 33px, transparent 34px 58px);
-    inset: -32% -5% -24%;
+    opacity: 0.58;
+    background-size: 1080px 608px;
+    inset: -92% -52% -82%;
+  }
+
+  [data-composer-seat]::after {
+    display: none;
+  }
+
+  [data-phase="hero"] [data-composer-seat]::before {
+    animation-duration: 14s;
   }
 
   [data-composer-card="true"],
@@ -179,6 +294,12 @@ textarea[data-phase]::placeholder {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  [data-phase="hero"] [data-composer-seat]::before,
+  [data-phase="hero"] [data-composer-seat]::after {
+    animation: none;
+    will-change: auto;
+  }
+
   [data-composer-card="true"],
   [data-dsh-surface="composer"] {
     transition: none;
